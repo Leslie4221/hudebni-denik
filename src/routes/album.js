@@ -18,15 +18,14 @@ router.post("/create", (req, res) => {
   res.json(album);
 });
 
-router.put("/update", (req, res) => {
-  const album = albumDao.update(req.query.id, req.body);
+router.post("/update", (req, res) => {
+  const album = albumDao.update(req.body);
   if (!album) return res.status(404).json({ message: "Album nenalezeno" });
   res.json(album);
 });
 
-router.delete("/delete", (req, res) => {
-  const result = albumDao.remove(req.query.id);
-  if (!result) return res.status(404).json({ message: "Album nenalezeno" });
+router.post("/delete", (req, res) => {
+  const result = albumDao.remove(req.body.id);
   res.json({ message: "Album smazáno" });
 });
 

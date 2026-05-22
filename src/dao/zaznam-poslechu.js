@@ -1,38 +1,73 @@
-const express = require("express");
-const router = express.Router();
-const zaznamPoslechuDao = require("../dao/zaznam-poslechu");
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
 
-router.get("/list", (req, res) => {
-  const zaznamy = zaznamPoslechuDao.list();
-  res.json({ itemList: zaznamy });
-});
+const zaznamFolderPath = path.join(__dirname, "../storage/zaznamPoslechuList");
 
-router.get("/listByAlbumId", (req, res) => {
-  const zaznamy = zaznamPoslechuDao.listByAlbumId(req.query.albumId);
-  res.json({ itemList: zaznamy });
-});
+function get(zaznamId) {
+  try {
+    const filePath = path.join(zaznamFolderPath, `${zaznamId}.json`);
+    const fileData = fs.readFileSync(filePath, "utf8");
+    return JSON.parse(fileData);
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw { code: "failedToReadZaznam", message: error.message };
+  }
+}
 
-router.get("/get", (req, res) => {
-  const zaznam = zaznamPoslechuDao.get(req.query.id);
-  if (!zaznam) return res.status(404).json({ message: "Záznam nenalezen" });
-  res.json(zaznam);
-});
+function create(zaznam) {
+  try {
+    zaznam.id = crypto.randomBytes(16).toString("hex");
+    const filePath = path.join(zaznamFolderPath, `${zaznam.id}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(zaznam), "utf8");
+    return zaznam;
+  } catch (error) {
+    throw { code: "failedToCreateZaznam", message: error.message };
+  }
+}
 
-router.post("/create", (req, res) => {
-  const zaznam = zaznamPoslechuDao.create(req.body);
-  res.json(zaznam);
-});
+function list() {
+  try {
+    const files = fs.readdirSync(zaznamFolderPath);
+    return files.map((file) => {
+      const fileData = fs.readFileSync(
+        path.join(zaznamFolderPath, file),
+        "utf8"
+      );
+      return JSON.parse(fileData);
+    });
+  } catch (error) {
+    throw { code: "failedToListZaznamy", message: error.message };
+  }
+}
 
-router.put("/update", (req, res) => {
-  const zaznam = zaznamPoslechuDao.update(req.query.id, req.body);
-  if (!zaznam) return res.status(404).json({ message: "Záznam nenalezen" });
-  res.json(zaznam);
-});
+function listByAlbumId(albumId) {
+  const zaznamy = list();
+  return zaznamy.filter((zaznam) => zaznam.albumId === albumId);
+}
 
-router.delete("/delete", (req, res) => {
-  const result = zaznamPoslechuDao.remove(req.query.id);
-  if (!result) return res.status(404).json({ message: "Záznam nenalezen" });
-  res.json({ message: "Záznam smazán" });
-});
+function update(zaznam) {
+  try {
+    const currentZaznam = get(zaznam.id);
+    if (!currentZaznam) return null;
+    const newZaznam = { ...currentZaznam, ...zaznam };
+    const filePath = path.join(zaznamFolderPath, `${zaznam.id}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(newZaznam), "utf8");
+    return newZaznam;
+  } catch (error) {
+    throw { code: "failedToUpdateZaznam", message: error.message };
+  }
+}
 
-module.exports = router;
+function remove(zaznamId) {
+  try {
+    const filePath = path.join(zaznamFolderPath, `${zaznamId}.json`);
+    fs.unlinkSync(filePath);
+    return {};
+  } catch (error) {
+    if (error.code === "ENOENT") return {};
+    throw { code: "failedToRemoveZaznam", message: error.message };
+  }
+}
+
+module.exports = { get, create, update, remove, list, listByAlbumId };
