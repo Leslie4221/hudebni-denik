@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/Leslie4221/hudebni-denik#readme",
   "dependencies": {
+    "ajv": "^8.20.0",
     "express": "^5.2.1"
   }
 }
