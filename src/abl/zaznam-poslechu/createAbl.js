@@ -30,6 +30,14 @@ async function CreateAbl(req, res) {
       return;
     }
 
+    if (new Date(zaznam.datumPostlechu) > new Date()) {
+      res.status(400).json({
+        code: "invalidDate",
+        message: "Datum poslechu nesmí být v budoucnosti",
+      });
+      return;
+    }
+
     const album = albumDao.get(zaznam.albumId);
     if (!album) {
       res.status(400).json({
